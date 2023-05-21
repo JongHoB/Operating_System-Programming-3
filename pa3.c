@@ -149,14 +149,14 @@ void free_page(unsigned int vpn)
 		return;
 	}
 	int pfn=cur_pte->pfn;
-	cur_pte->valid=true;
+	cur_pte->valid=false;
 	cur_pte->rw=0;
 	cur_pte->pfn=0;
 	cur_pte->private=0;
 	mapcounts[pfn]--;
 	///////////////////////////////
 	/*Also, think about TLB as well ;-)*/
-		
+
 	return;
 
 
@@ -181,6 +181,29 @@ void free_page(unsigned int vpn)
  */
 bool handle_page_fault(unsigned int vpn, unsigned int rw)
 {
+	int outer_pte_index=vpn/NR_PTES_PER_PAGE;
+	int pte_index=vpn%NR_PTES_PER_PAGE;
+	struct pte_directory *cur_outer_pte=current->pagetable.outer_ptes[outer_pte_index];
+	if(!cur_outer_pte)
+	{
+		return false;
+	}
+	struct pte*cur_pte = &(cur_outer_pte->ptes[pte_index]);
+	if(!cur_pte){
+		return false;
+	}
+	if(cur_pte->valid&&rw==ACCESS_WRITE&&cur_pte->private==ACCESS_WRITE){
+			for(int i=0;i<NR_PAGEFRAMES;i++){
+				if(!mapcounts[i]){
+					int pfn=i;
+					mapcounts[cur_pte->pfn]--;
+					cur_pte->pfn=pfn;
+					cur_pte->rw=rw;
+					mapcounts[pfn]++;
+					return true;
+				}
+			}
+	}
 	return false;
 }
 
