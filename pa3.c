@@ -141,6 +141,25 @@ unsigned int alloc_page(unsigned int vpn, unsigned int rw)
  */
 void free_page(unsigned int vpn)
 {
+	int outer_pte_index=vpn/NR_PTES_PER_PAGE;
+	int pte_index=vpn%NR_PTES_PER_PAGE;
+	struct pte_directory *cur_outer_pte=current->pagetable.outer_ptes[outer_pte_index];
+	struct pte*cur_pte = &(cur_outer_pte->ptes[pte_index]);
+	if(!cur_outer_pte||!cur_pte){
+		return;
+	}
+	int pfn=cur_pte->pfn;
+	cur_pte->valid=true;
+	cur_pte->rw=0;
+	cur_pte->pfn=0;
+	cur_pte->private=0;
+	mapcounts[pfn]--;
+	///////////////////////////////
+	/*Also, think about TLB as well ;-)*/
+		
+	return;
+
+
 }
 
 
