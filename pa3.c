@@ -228,4 +228,39 @@ bool handle_page_fault(unsigned int vpn, unsigned int rw)
  */
 void switch_process(unsigned int pid)
 {
+	struct process * proc=NULL;
+	list_for_each_entry(proc,&processes,list){
+		if(proc->pid==pid){
+			list_add_tail(&current->list,&processes);
+			current=proc;
+			ptbr=&current->pagetable;
+			break;
+		}
+	}
+	if(current->pid==pid){
+		list_del(&current->list);
+		return;
+	}
+	struct process *child=(struct process *)malloc(sizeof(struct process));
+	child->pid=pid;
+	for(int i=0;i<NR_PTES_PER_PAGE;i++)
+	{
+		if(current->pagetable.outer_ptes[i]){
+			child->pagetable.outer_ptes[i]=(struct pte_directory *)malloc(sizeof(struct pte_directory));
+			for(int j=0;j<NR_PTES_PER_PAGE;j++){
+				if(current->pagetable.outer_ptes[i]->ptes[j].rw==ACCESS_WRITE)
+				{
+					current->pagetable.outer_ptes[i]->ptes[j].rw=ACCESS_READ;
+				}
+				child->pagetable.outer_ptes[i]->ptes[j]=current->pagetable.outer_ptes[i]->ptes[j];
+				if(current->pagetable.outer_ptes[i]->ptes[j].valid){
+					mapcounts[current->pagetable.outer_ptes[i]->ptes[j].pfn]++;	
+				}
+		}
+		}
+	}
+	list_add_tail(&current->list,&processes);
+	current=child;
+	ptbr=&current->pagetable;
+	return;
 }
