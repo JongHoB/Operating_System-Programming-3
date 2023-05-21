@@ -103,6 +103,29 @@ void insert_tlb(unsigned int vpn, unsigned int rw, unsigned int pfn)
  */
 unsigned int alloc_page(unsigned int vpn, unsigned int rw)
 {
+	int outer_pte_index=vpn/NR_PTES_PER_PAGE;
+	int pte_index=vpn%NR_PTES_PER_PAGE;
+	struct pte_directory *cur_outer_pte=current->pagetable.outer_ptes[outer_pte_index];
+	int pfn;
+
+
+	for(int i=0;i<NR_PAGEFRAMES;i++){
+		if(!mapcounts[i]){
+			pfn=i;
+			if(cur_outer_pte==NULL){
+				cur_outer_pte=(struct pte_directory *)malloc(sizeof(struct pte_directory));
+			}
+			struct pte*cur_pte = &(cur_outer_pte->ptes[pte_index]);
+			cur_pte->valid=true;
+			cur_pte->rw=rw;
+			cur_pte->private=rw;
+			cur_pte->pfn=pfn;
+			mapcounts[i]++;
+			return pfn;
+		}
+	}
+
+
 	return -1;
 }
 
