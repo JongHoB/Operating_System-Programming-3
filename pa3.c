@@ -114,6 +114,7 @@ unsigned int alloc_page(unsigned int vpn, unsigned int rw)
 			pfn=i;
 			if(cur_outer_pte==NULL){
 				cur_outer_pte=(struct pte_directory *)malloc(sizeof(struct pte_directory));
+				current->pagetable.outer_ptes[outer_pte_index]=cur_outer_pte;	
 			}
 			struct pte*cur_pte = &(cur_outer_pte->ptes[pte_index]);
 			cur_pte->valid=true;
@@ -188,17 +189,21 @@ bool handle_page_fault(unsigned int vpn, unsigned int rw)
 	{
 		return false;
 	}
-	struct pte*cur_pte = &(cur_outer_pte->ptes[pte_index]);
+	struct pte*cur_pte = &cur_outer_pte->ptes[pte_index];
 	if(!cur_pte){
 		return false;
 	}
-	if(cur_pte->valid&&rw==ACCESS_WRITE&&cur_pte->private==ACCESS_WRITE){
+	if(cur_pte->valid&&rw==ACCESS_WRITE&&cur_pte->private==ACCESS_WRITE+ACCESS_READ&&cur_pte->rw==ACCESS_READ){
+		if(mapcounts[cur_pte->pfn]==1){
+			cur_pte->rw=ACCESS_READ+ACCESS_WRITE;
+			return true;
+		}
 			for(int i=0;i<NR_PAGEFRAMES;i++){
 				if(!mapcounts[i]){
 					int pfn=i;
 					mapcounts[cur_pte->pfn]--;
 					cur_pte->pfn=pfn;
-					cur_pte->rw=rw;
+					cur_pte->rw=ACCESS_READ+ACCESS_WRITE;
 					mapcounts[pfn]++;
 					return true;
 				}
@@ -248,7 +253,7 @@ void switch_process(unsigned int pid)
 		if(current->pagetable.outer_ptes[i]){
 			child->pagetable.outer_ptes[i]=(struct pte_directory *)malloc(sizeof(struct pte_directory));
 			for(int j=0;j<NR_PTES_PER_PAGE;j++){
-				if(current->pagetable.outer_ptes[i]->ptes[j].rw==ACCESS_WRITE)
+				if(current->pagetable.outer_ptes[i]->ptes[j].rw==ACCESS_READ+ACCESS_WRITE)
 				{
 					current->pagetable.outer_ptes[i]->ptes[j].rw=ACCESS_READ;
 				}
