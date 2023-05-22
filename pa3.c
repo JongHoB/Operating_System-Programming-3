@@ -172,7 +172,14 @@ void free_page(unsigned int vpn)
 	mapcounts[pfn]--;
 	///////////////////////////////
 	/*Also, think about TLB as well ;-)*/
-
+	for(unsigned int i=0;i<1UL << (PTES_PER_PAGE_SHIFT * 2);i++){
+		if(tlb[i].vpn==vpn&&tlb[i].valid){
+			tlb[i].valid=false;
+			tlb[i].rw=-1;
+			tlb[i].vpn=-1;
+			tlb[i].pfn=-1;
+		}
+	}
 	return;
 
 
@@ -197,13 +204,6 @@ void free_page(unsigned int vpn)
  */
 bool handle_page_fault(unsigned int vpn, unsigned int rw)
 {
-	for(unsigned int i=0;i<1UL << (PTES_PER_PAGE_SHIFT * 2);i++){
-			tlb[i].valid=false;
-			tlb[i].rw=-1;
-			tlb[i].vpn=-1;
-			tlb[i].pfn=-1;
-			
-	}
 	int outer_pte_index=vpn/NR_PTES_PER_PAGE;
 	int pte_index=vpn%NR_PTES_PER_PAGE;
 	struct pte_directory *cur_outer_pte=current->pagetable.outer_ptes[outer_pte_index];
@@ -255,7 +255,13 @@ bool handle_page_fault(unsigned int vpn, unsigned int rw)
  */
 void switch_process(unsigned int pid)
 {
-
+	for(unsigned int i=0;i<1UL << (PTES_PER_PAGE_SHIFT * 2);i++){
+			tlb[i].valid=false;
+			tlb[i].rw=-1;
+			tlb[i].vpn=-1;
+			tlb[i].pfn=-1;
+			
+	}
 	struct process * proc=NULL;
 	list_for_each_entry(proc,&processes,list){
 		if(proc->pid==pid){
