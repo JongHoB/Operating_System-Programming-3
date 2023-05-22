@@ -65,6 +65,7 @@ extern unsigned int mapcounts[];
  */
 bool lookup_tlb(unsigned int vpn, unsigned int rw, unsigned int *pfn)
 {
+	
 	return false;
 }
 
@@ -82,6 +83,15 @@ bool lookup_tlb(unsigned int vpn, unsigned int rw, unsigned int *pfn)
  */
 void insert_tlb(unsigned int vpn, unsigned int rw, unsigned int pfn)
 {
+	for(unsigned int i=0;i<1UL << (PTES_PER_PAGE_SHIFT * 2);i++){
+		if(!tlb[i].valid){
+			tlb[i].valid=true;
+			tlb[i].rw=rw;
+			tlb[i].vpn=vpn;
+			tlb[i].pfn=pfn;
+			return;
+		}
+	}
 }
 
 
@@ -182,6 +192,9 @@ void free_page(unsigned int vpn)
  */
 bool handle_page_fault(unsigned int vpn, unsigned int rw)
 {
+	for(unsigned int i=0;i<1UL << (PTES_PER_PAGE_SHIFT * 2);i++){
+			tlb[i].valid=false;
+	}
 	int outer_pte_index=vpn/NR_PTES_PER_PAGE;
 	int pte_index=vpn%NR_PTES_PER_PAGE;
 	struct pte_directory *cur_outer_pte=current->pagetable.outer_ptes[outer_pte_index];
@@ -233,6 +246,7 @@ bool handle_page_fault(unsigned int vpn, unsigned int rw)
  */
 void switch_process(unsigned int pid)
 {
+
 	struct process * proc=NULL;
 	list_for_each_entry(proc,&processes,list){
 		if(proc->pid==pid){
