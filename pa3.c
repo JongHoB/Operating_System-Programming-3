@@ -89,6 +89,13 @@ bool lookup_tlb(unsigned int vpn, unsigned int rw, unsigned int *pfn)
 void insert_tlb(unsigned int vpn, unsigned int rw, unsigned int pfn)
 {
 	for(unsigned int i=0;i<1UL << (PTES_PER_PAGE_SHIFT * 2);i++){
+		if(tlb[i].vpn==vpn && tlb[i].valid){
+			tlb[i].rw=rw;
+			tlb[i].pfn=pfn;
+			return;
+		}
+	}
+	for(unsigned int i=0;i<1UL << (PTES_PER_PAGE_SHIFT * 2);i++){
 		if(!tlb[i].valid){
 			tlb[i].valid=true;
 			tlb[i].rw=rw;
